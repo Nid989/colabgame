@@ -1,0 +1,167 @@
+# Unified Configuration for Computer Game Instance Generator (Simplified)
+# This file uses a declarative approach to reduce repetition
+
+# =============================================================================
+# DEFAULTS - Applied to all experiments unless overridden
+# =============================================================================
+defaults:
+  environment_type: "osworld"
+  instances_per_task: 2
+  upload_s3: true
+  output_dir: "outputs"
+
+# =============================================================================
+# TASK CATEGORIES - Define available categories with their levels and task types
+# =============================================================================
+categories:
+  debugging_and_refactoring:
+    levels:
+      1: ["basic_python_syntax_fix"]
+      2: ["simple_logic_completion"]
+      3: ["multi_file_config_update"]
+
+  tabular_data_reporting:
+    levels:
+      1: ["simple_data_transfer"]
+      2: ["basic_data_aggregation"]
+      3: ["simple_calculation_output"]
+
+  image_processing:
+    levels:
+      1: ["basic_image_insertion"]
+      2: ["image_resize_insertion"]
+      3: ["image_modify_caption"]
+
+  research_synthesis:
+    levels:
+      1: ["basic_web_extraction"]
+      2: ["multi_point_summary"]
+      3: ["file_download_integration"]
+
+  workflow_orchestration:
+    levels:
+      1: ["basic_info_gathering"]
+
+  # OSWorld categories (external tasks loaded from osworld_subset.json)
+  osworld:
+    source_type: "osworld"
+    task_types: ["chrome", "gimp", "libreoffice_writer", "os"]
+
+# =============================================================================
+# TOPOLOGIES - Define available agent topologies
+# =============================================================================
+topologies:
+  single:
+    agent_type: "single_agent"
+  star:
+    agent_type: "multi_agent"
+  blackboard:
+    agent_type: "multi_agent"
+  mesh:
+    agent_type: "multi_agent"
+
+# =============================================================================
+# OBSERVATION TYPES - Define available observation modes
+# =============================================================================
+observation_types:
+  - "a11y_tree"
+  - "screenshot"
+  - "screenshot_a11y_tree"
+
+# =============================================================================
+# EXPERIMENTS - Compact definition of which experiments to generate
+# =============================================================================
+# Format: Each entry generates experiments for all combinations
+experiments:
+  # Single agent experiments with all observation types (Level 1 only)
+  single_agent_level1_all_obs:
+    topology: "single"
+    categories:
+      [
+        "debugging_and_refactoring",
+        "tabular_data_reporting",
+        "image_processing",
+        "research_synthesis",
+      ]
+    levels: [1]
+    observation_types: ["a11y_tree", "screenshot", "screenshot_a11y_tree"]
+
+  # Single agent experiments with screenshot_a11y_tree only (Levels 2-3)
+  single_agent_level2_3:
+    topology: "single"
+    categories:
+      [
+        "debugging_and_refactoring",
+        "tabular_data_reporting",
+        "image_processing",
+        "research_synthesis",
+      ]
+    levels: [2, 3]
+    observation_types: ["screenshot_a11y_tree"]
+
+  # Multi-agent star topology (all levels)
+  multi_agent_star:
+    topology: "star"
+    categories:
+      [
+        "debugging_and_refactoring",
+        "tabular_data_reporting",
+        "image_processing",
+        "research_synthesis",
+      ]
+    levels: [1, 2, 3]
+    observation_types: ["screenshot_a11y_tree"]
+
+  # Multi-agent blackboard topology (all levels)
+  multi_agent_blackboard:
+    topology: "blackboard"
+    categories:
+      [
+        "debugging_and_refactoring",
+        "tabular_data_reporting",
+        "image_processing",
+        "research_synthesis",
+      ]
+    levels: [1, 2, 3]
+    observation_types: ["screenshot_a11y_tree"]
+
+  # Multi-agent mesh topology (all levels)
+  multi_agent_mesh:
+    topology: "mesh"
+    categories:
+      [
+        "debugging_and_refactoring",
+        "tabular_data_reporting",
+        "image_processing",
+        "research_synthesis",
+      ]
+    levels: [1, 2, 3]
+    observation_types: ["screenshot_a11y_tree"]
+
+  # Workflow orchestration - all topologies
+  workflow_orchestration:
+    topology: ["single", "star", "mesh", "blackboard"]
+    categories: ["workflow_orchestration"]
+    levels: [1]
+    observation_types: ["screenshot_a11y_tree"]
+
+  # OSWorld experiments - all topologies
+  osworld_experiments:
+    topology: ["single", "star", "mesh", "blackboard"]
+    categories: ["osworld"]
+    task_types: ["chrome", "gimp", "libreoffice_writer", "os"]
+    observation_types: ["screenshot_a11y_tree"]
+
+# =============================================================================
+# SYSTEM CONFIGURATION
+# =============================================================================
+system:
+  headless: true
+  vm_path: "/Users/nidhirbhavsar/Desktop/WORK/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
+  screen_width: 1920
+  screen_height: 1080
+  max_rounds: 10
+  max_transitions_per_round: 20
+  player_consecutive_violation_limit: 3
+  player_total_violation_limit: 5
+  sliding_window_size: 3

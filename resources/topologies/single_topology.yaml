@@ -1,0 +1,75 @@
+# Single Topology Configuration
+# Single agent working alone
+
+topology_type: "single"
+
+# Domain definitions with dual descriptions - Comprehensive domain library
+domain_definitions:
+  universal_specialist:
+    self_description: "You are a highly capable, autonomous agent with a full spectrum of specialist skills, including planning, execution, and review. You independently break down goals, perform all necessary tasks (coding, research, file operations), and critically evaluate your own work to ensure the final output is flawless."
+    team_description: "handles all aspects of task completion independently with comprehensive specialist skills"
+
+# Role definitions for single topology
+role_definitions:
+  participant_w_execute:
+    message_permissions:
+      send: ["EXECUTE", "STATUS"]
+      receive: []
+    allowed_components: ["round_info", "observation", "error"]
+    receives_goal: true
+    handler_type: "environment"
+
+# Default participant assignments - fallback when category not found
+default_participant_assignments:
+  participant_w_execute:
+    count: 1
+    domains: ["universal_specialist"]
+
+# Category-specific participant assignments
+category_participant_assignments:
+  debugging_and_refactoring:
+    participant_w_execute:
+      count: 1
+      domains: ["universal_specialist"]
+  
+  tabular_data_reporting:
+    participant_w_execute:
+      count: 1
+      domains: ["universal_specialist"]
+      
+  image_processing:
+    participant_w_execute:
+      count: 1
+      domains: ["universal_specialist"]
+      
+  research_synthesis:
+    participant_w_execute:
+      count: 1
+      domains: ["universal_specialist"]
+
+  osworld:
+    task_types:
+      chrome:
+        participant_w_execute:
+          count: 1
+          domains: ["universal_specialist"]
+      libreoffice_writer:
+        participant_w_execute:
+          count: 1
+          domains: ["universal_specialist"]
+      gimp:
+        participant_w_execute:
+          count: 1
+          domains: ["universal_specialist"]
+      os:
+        participant_w_execute:
+          count: 1
+          domains: ["universal_specialist"]
+      default:
+        participant_w_execute:
+          count: 1
+          domains: ["universal_specialist"]
+
+# Validation rules
+validation_rules:
+  participant_count: "exactly_1"
