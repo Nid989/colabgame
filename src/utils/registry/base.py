@@ -48,8 +48,6 @@ class Registry(Generic[T]):
         Raises:
             KeyError: If function with given ID is not registered.
         """
-        if func_id not in self._registry:
-            raise KeyError(f"Function with ID '{func_id}' not registered")
         return self._registry[func_id]
 
     def __contains__(self, func_id: str) -> bool:

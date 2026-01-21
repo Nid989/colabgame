@@ -36,64 +36,9 @@ def process_observation(observation: Dict[str, Any], game_config: Dict) -> Dict[
     return processed_obs
 
 
-@processors.register("request")
-def process_request(request: str, game_config: Dict) -> str:
-    """Process a request string
-    Args:
-        request: Raw request string
-        game_config: Dictionary containing game configuration
-    Returns:
-        Processed request string
-    """
-    return request
-
-
-@processors.register("response")
-def process_response(response: str, game_config: Dict) -> str:
-    """Process a response string
-    Args:
-        response: Raw response string
-        game_config: Dictionary containing game configuration
-    Returns:
-        Processed response string
-    """
-    return response
-
-
-@processors.register("plan")
-def process_plan(plan: str, game_config: Dict) -> str:
-    """Process a plan string
-    Args:
-        plan: Raw plan string
-        game_config: Dictionary containing game configuration
-    Returns:
-        Processed plan string
-    """
-    return plan
-
-
-@processors.register("task")
-def process_task(task: str, game_config: Dict) -> str:
-    """Process a task string
-    Args:
-        task: Raw task string
-        game_config: Dictionary containing game configuration
-    Returns:
-        Processed task string
-    """
-    return task
-
-
-@processors.register("additional")
-def process_additional(additional: Dict[str, str], game_config: Dict) -> Dict[str, str]:
-    """Process additional tagged content
-    Args:
-        additional: Dictionary containing tag and content pairs
-        game_config: Dictionary containing game configuration
-    Returns:
-        Processed additional content dictionary
-    """
-    return additional
+# Note: Removed pass-through processors (request, response, plan, task, additional)
+# that simply returned their input unchanged. Callers should check if a processor
+# exists before calling it, and use the raw value if no processor is registered.
 
 
 @processors.register("blackboard")

@@ -36,7 +36,7 @@ class OSWorldSession:
     failed_tasks: list = field(default_factory=list)
 
 
-class ComputerGameInstanceGenerator(GameInstanceGenerator):
+class ColabGameInstanceGenerator(GameInstanceGenerator):
     """
     Generates instances for the computer game with different observation types.
     Uses a declarative configuration to reduce redundancy in the config file.
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true", help="Run test/demo code")
     args = parser.parse_args()
 
-    generator = ComputerGameInstanceGenerator("./")
+    generator = ColabGameInstanceGenerator("./")
     generator.generate(filename="instances.json")
     print("Generated instances file: instances.json")
 

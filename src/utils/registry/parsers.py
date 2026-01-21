@@ -77,6 +77,21 @@ def process_content(
     return parser(content, environment_type, action_space)
 
 
+# Helper functions for common validation patterns
+def _validate_environment(environment_type: str, expected: str = "osworld") -> Optional[ParseError]:
+    """Validate environment type matches expected value."""
+    if environment_type != expected:
+        return ParseError(reason=f"Invalid context: expected environment_type='{expected}', got {environment_type}")
+    return None
+
+
+def _validate_string_content(content: Any, content_name: str) -> Optional[ParseError]:
+    """Validate content is a non-empty string."""
+    if not isinstance(content, str) or not content.strip():
+        return ParseError(reason=f"{content_name} content must be a non-empty string", response=content)
+    return None
+
+
 # Parser functions
 @parsers.register(("EXECUTE", "osworld", "pyautogui"))
 @parser_config(
@@ -96,8 +111,9 @@ def parse_osworld_pyautogui(content: str, environment_type: str, action_space: O
     if environment_type != "osworld" or action_space != "pyautogui":
         return False, ParseError(reason=f"Invalid context: expected environment_type='osworld', action_space='pyautogui', got {environment_type}, {action_space}")
 
-    if not isinstance(content, str) or not content.strip():
-        return False, ParseError(reason="PyAutoGUI content must be a non-empty string", response=content)
+    error = _validate_string_content(content, "PyAutoGUI")
+    if error:
+        return False, error
 
     try:
         ast.parse(content)
@@ -214,11 +230,13 @@ def parse_osworld_status(content: str, environment_type: str, action_space: Opti
     Returns:
         Tuple of (success: bool, status: Optional[List[str]] | Exception)
     """
-    if environment_type != "osworld":
-        return False, ParseError(reason=f"Invalid context: expected environment_type='osworld', got {environment_type}")
+    error = _validate_environment(environment_type)
+    if error:
+        return False, error
 
-    if not isinstance(content, str) or not content.strip():
-        return False, ParseError(reason="STATUS content must be a non-empty string", response=content)
+    error = _validate_string_content(content, "STATUS")
+    if error:
+        return False, error
 
     status = content.strip()
     if status not in ["DONE", "FAIL"]:
@@ -242,11 +260,13 @@ def parse_osworld_request(content: str, environment_type: str, action_space: Opt
     Returns:
         Tuple of (success: bool, request: Optional[str] | Exception)
     """
-    if environment_type != "osworld":
-        return False, ParseError(reason=f"Invalid context: expected environment_type='osworld', got {environment_type}")
+    error = _validate_environment(environment_type)
+    if error:
+        return False, error
 
-    if not isinstance(content, str) or not content.strip():
-        return False, ParseError(reason="REQUEST content must be a non-empty string", response=content)
+    error = _validate_string_content(content, "REQUEST")
+    if error:
+        return False, error
 
     return True, content.strip()
 
@@ -266,11 +286,13 @@ def parse_osworld_response(content: str, environment_type: str, action_space: Op
     Returns:
         Tuple of (success: bool, response: Optional[str] | Exception)
     """
-    if environment_type != "osworld":
-        return False, ParseError(reason=f"Invalid context: expected environment_type='osworld', got {environment_type}")
+    error = _validate_environment(environment_type)
+    if error:
+        return False, error
 
-    if not isinstance(content, str) or not content.strip():
-        return False, ParseError(reason="RESPONSE content must be a non-empty string", response=content)
+    error = _validate_string_content(content, "RESPONSE")
+    if error:
+        return False, error
 
     return True, content.strip()
 
@@ -290,10 +312,12 @@ def parse_osworld_write_board(content: str, environment_type: str, action_space:
     Returns:
         Tuple of (success: bool, content: Optional[str] | Exception)
     """
-    if environment_type != "osworld":
-        return False, ParseError(reason=f"Invalid context: expected environment_type='osworld', got {environment_type}")
+    error = _validate_environment(environment_type)
+    if error:
+        return False, error
 
-    if not isinstance(content, str) or not content.strip():
-        return False, ParseError(reason="WRITE_BOARD content must be a non-empty string", response=content)
+    error = _validate_string_content(content, "WRITE_BOARD")
+    if error:
+        return False, error
 
     return True, content.strip()

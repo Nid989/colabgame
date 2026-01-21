@@ -42,14 +42,15 @@ class PromptTemplateManager:
         """Convert numeric index to alphabetical character (1 -> A, 2 -> B, etc.)."""
         if index < 1:
             return ""
-        if index <= 26:
-            return chr(64 + index)  # ASCII 65 = 'A', so 64 + index gives us the right letter
-        # For indices > 26, use AA, AB, etc.
+
         result = ""
-        while index > 0:
-            index -= 1
+        index -= 1
+        while True:
             result = chr(65 + (index % 26)) + result
             index //= 26
+            if index == 0:
+                break
+            index -= 1
         return result
 
     def _join_with_or(self, items: List[str]) -> str:
@@ -368,15 +369,17 @@ Proceed with your assigned responsibilities.
 
         return context
 
-    def _get_domain_manager(self, graph_config: Optional[Dict] = None) -> Optional[DomainManager]:
-        """
-        Get domain manager from graph configuration.
+    def _get_domain_manager(self, graph_config: Optional[Dict] = None) -> DomainManager:
+        """Get domain manager from graph configuration.
 
         Args:
             graph_config: Graph configuration containing domain definitions
 
         Returns:
-            DomainManager instance if domain definitions are available, None otherwise
+            DomainManager instance
+
+        Raises:
+            DomainResolutionError: If domain definitions are missing or empty
         """
         if not graph_config or "domain_definitions" not in graph_config:
             raise DomainResolutionError("Domain definitions are required but not found in graph configuration")
@@ -386,6 +389,48 @@ Proceed with your assigned responsibilities.
             raise DomainResolutionError("Domain definitions section is empty - all domains must have descriptions")
 
         return DomainManager(domain_definitions)
+
+    def _resolve_domain_info(self, domain_manager: DomainManager, domain_name: str, context: str) -> Dict:
+        """Resolve domain name to domain information dictionary.
+
+        Args:
+            domain_manager: DomainManager instance
+            domain_name: Name of the domain to resolve
+            context: Context for resolution ('self' or 'team')
+
+        Returns:
+            Dictionary with domain_name, domain_description, and has_description
+        """
+        domain_info = domain_manager.resolve_domain(domain_name, context=context)
+        return {
+            "domain_name": domain_info["name"],
+            "domain_description": domain_info["description"],
+            "has_description": domain_info["has_description"],
+        }
+
+    def _find_node_domain(self, node_id: str, graph_config: Optional[Dict], domain_manager: DomainManager, context: str) -> Optional[Dict]:
+        """Find and resolve domain for a specific node ID.
+
+        Args:
+            node_id: Node identifier to search for
+            graph_config: Graph configuration containing node assignments
+            domain_manager: DomainManager instance
+            context: Context for resolution ('self' or 'team')
+
+        Returns:
+            Domain info dictionary if found, None otherwise
+        """
+        if not graph_config or "node_assignments" not in graph_config or not node_id:
+            return None
+
+        node_assignments = graph_config["node_assignments"]
+        for role_type, nodes in node_assignments.items():
+            for node_info in nodes:
+                if node_info.get("node_id") == node_id:
+                    domain_name = node_info.get("domain")
+                    if domain_name:
+                        return self._resolve_domain_info(domain_manager, domain_name, context)
+        return None
 
     def _add_dynamic_topology_context(self, context: Dict, base_role: str, node_id: str, participants: Dict, graph_config: Optional[Dict] = None) -> None:
         """Add dynamic topology-aware context variables."""
@@ -412,88 +457,49 @@ Proceed with your assigned responsibilities.
 
     def _add_hub_context(self, context: Dict, participants: Dict, graph_config: Optional[Dict] = None) -> None:
         """Add context for hub/advisor roles in star topology with mandatory domain descriptions."""
-        # Get domain manager for resolving descriptions
         domain_manager = self._get_domain_manager(graph_config)
         executor_domains = []
-        own_domain = None
         node_id = context.get("role_name")
 
-        # Get domain information from graph configuration
+        # Find hub's own domain
+        own_domain = self._find_node_domain(node_id, graph_config, domain_manager, context="self")
+
+        # Collect spoke domains from graph configuration
         if graph_config and "node_assignments" in graph_config:
             node_assignments = graph_config["node_assignments"]
-            # Find the Hub's own domain from its node_id
-            if node_id:
-                for role_type, nodes in node_assignments.items():
-                    for node_info in nodes:
-                        if node_info.get("node_id") == node_id:
-                            domain_name = node_info.get("domain")
-                            if domain_name:
-                                domain_info = domain_manager.resolve_domain(domain_name, context="self")
-                                own_domain = {
-                                    "domain_name": domain_info["name"],
-                                    "domain_description": domain_info["description"],
-                                    "has_description": domain_info["has_description"],
-                                }
-                            break
-                    if own_domain:
-                        break
-            # Collect node_id and domain pairs from all spoke types
             for role_type in ["spoke_w_execute", "spoke_wo_execute"]:
                 if role_type in node_assignments:
+                    handler_type = "environment" if role_type == "spoke_w_execute" else "standard"
                     for node_info in node_assignments[role_type]:
-                        node_id = node_info.get("node_id")
+                        spoke_id = node_info.get("node_id")
                         domain_name = node_info.get("domain")
-                        if node_id and domain_name:
-                            # Resolve domain to get team description for executor domains
-                            domain_info = domain_manager.resolve_domain(domain_name, context="team")
-                            # Get handler_type from role definitions
-                            handler_type = "environment" if role_type == "spoke_w_execute" else "standard"
-                            executor_domains.append(
-                                {
-                                    "node_id": node_id,
-                                    "domain_name": domain_info["name"],
-                                    "domain_description": domain_info["description"],
-                                    "has_description": domain_info["has_description"],
-                                    "handler_type": handler_type,
-                                }
-                            )
+                        if spoke_id and domain_name:
+                            domain_info = self._resolve_domain_info(domain_manager, domain_name, context="team")
+                            executor_domains.append({"node_id": spoke_id, "handler_type": handler_type, **domain_info})
 
-        # Fallback to participant information if graph config doesn't have node assignments
+        # Fallback to participant information
         if not executor_domains:
-            # Check for new topology participants first
             spoke_domains = []
             for role_type in ["spoke_w_execute", "spoke_wo_execute"]:
                 if role_type in participants:
                     spoke_domains.extend(participants[role_type].get("domains", []))
 
-            # Fallback to legacy executor participants
             if not spoke_domains and "executor" in participants:
                 spoke_domains = participants["executor"].get("domains", [])
 
-            # Convert domain list to node_id/domain pairs with descriptions
             for i, domain_name in enumerate(spoke_domains):
-                domain_info = domain_manager.resolve_domain(domain_name, context="team")
-                # Determine handler_type based on which spoke type this domain belongs to
-                handler_type = "environment"  # Default to environment for spoke_w_execute
-                # Check if this domain belongs to spoke_wo_execute by looking at participant config
+                domain_info = self._resolve_domain_info(domain_manager, domain_name, context="team")
+                handler_type = "environment"
                 for role_type in ["spoke_wo_execute"]:
                     if role_type in participants and domain_name in participants[role_type].get("domains", []):
                         handler_type = "standard"
                         break
-                executor_domains.append(
-                    {
-                        "node_id": f"spoke_{i + 1}",  # Generic fallback names
-                        "domain_name": domain_info["name"],
-                        "domain_description": domain_info["description"],
-                        "has_description": domain_info["has_description"],
-                        "handler_type": handler_type,
-                    }
-                )
+                executor_domains.append({"node_id": f"spoke_{i + 1}", "handler_type": handler_type, **domain_info})
 
         context.update(
             {
                 "include_executor_domains": len(executor_domains) > 0,
-                "executor_domains": executor_domains,  # Now includes descriptions
+                "executor_domains": executor_domains,
                 "include_own_domain": own_domain is not None,
                 "own_domain": own_domain,
             }
@@ -501,32 +507,15 @@ Proceed with your assigned responsibilities.
 
     def _add_spoke_context(self, context: Dict, base_role: str, node_id: str, participants: Dict, graph_config: Optional[Dict] = None) -> None:
         """Add context for spoke/executor roles in star topology with mandatory domain descriptions."""
-        # Get domain manager for resolving descriptions
         domain_manager = self._get_domain_manager(graph_config)
-        own_domain = None
         total_participants = 0
 
-        # Try to get domain from graph configuration first
-        if graph_config and "node_assignments" in graph_config and node_id:
-            node_assignments = graph_config["node_assignments"]
-            # Search for this specific node's domain
-            for role_type, nodes in node_assignments.items():
-                for node_info in nodes:
-                    if node_info.get("node_id") == node_id:
-                        domain_name = node_info.get("domain")
-                        if domain_name:
-                            # Resolve domain to get self description for own domain
-                            domain_info = domain_manager.resolve_domain(domain_name, context="self")
-                            own_domain = {
-                                "domain_name": domain_info["name"],
-                                "domain_description": domain_info["description"],
-                                "has_description": domain_info["has_description"],
-                            }
-                        break
-                if own_domain:
-                    break
+        # Try to get domain from graph configuration
+        own_domain = self._find_node_domain(node_id, graph_config, domain_manager, context="self")
 
-            # Count total participants
+        # Count total participants from graph config
+        if graph_config and "node_assignments" in graph_config:
+            node_assignments = graph_config["node_assignments"]
             for role_type in ["spoke_w_execute", "spoke_wo_execute"]:
                 if role_type in node_assignments:
                     total_participants += len(node_assignments[role_type])
@@ -540,35 +529,26 @@ Proceed with your assigned responsibilities.
                     count = participant_info.get("count", 0)
                     total_participants += count
 
-                    # Try to match node_id to domain
                     if node_id and "_" in node_id and not found_domain_name:
                         try:
-                            # Extract number from node_id like "spoke_w_execute_1" -> 1
                             parts = node_id.split("_")
                             if parts[-1].isdigit():
-                                idx = int(parts[-1]) - 1  # Convert to 0-based index
+                                idx = int(parts[-1]) - 1
                                 if 0 <= idx < len(domains):
                                     found_domain_name = domains[idx]
                         except (ValueError, IndexError):
                             pass
 
-                    # If no domain found yet, try first domain as fallback
                     if not found_domain_name and domains:
                         found_domain_name = domains[0]
 
-            # Resolve the found domain name to get self description
             if found_domain_name and not own_domain:
-                domain_info = domain_manager.resolve_domain(found_domain_name, context="self")
-                own_domain = {
-                    "domain_name": domain_info["name"],
-                    "domain_description": domain_info["description"],
-                    "has_description": domain_info["has_description"],
-                }
+                own_domain = self._resolve_domain_info(domain_manager, found_domain_name, context="self")
 
         context.update(
             {
                 "include_own_domain": own_domain is not None,
-                "own_domain": own_domain,  # Now includes description
+                "own_domain": own_domain,
                 "include_other_executors": total_participants > 1,
                 "total_executors": total_participants,
             }
@@ -693,41 +673,16 @@ Proceed with your assigned responsibilities.
     def _add_single_agent_context(self, context: Dict, base_role: str, node_id: str, participants: Dict, graph_config: Optional[Dict] = None) -> None:
         """Add context for the single agent in a single topology."""
         domain_manager = self._get_domain_manager(graph_config)
-        own_domain = None
 
-        # Try to get domain from graph configuration first
-        if graph_config and "node_assignments" in graph_config and node_id:
-            node_assignments = graph_config["node_assignments"]
-            # Search for this specific node's domain
-            for role_type, nodes in node_assignments.items():
-                for node_info in nodes:
-                    if node_info.get("node_id") == node_id:
-                        domain_name = node_info.get("domain")
-                        if domain_name:
-                            domain_info = domain_manager.resolve_domain(domain_name, context="self")
-                            own_domain = {
-                                "domain_name": domain_info["name"],
-                                "domain_description": domain_info["description"],
-                                "has_description": domain_info["has_description"],
-                            }
-                        break
-                if own_domain:
-                    break
+        # Try to get domain from graph configuration
+        own_domain = self._find_node_domain(node_id, graph_config, domain_manager, context="self")
 
-        # Fallback to participant information if graph config doesn't have node assignments
+        # Fallback to participant information
         if not own_domain and participants:
-            # For single topology, there should be only one participant type
             for participant_type, participant_info in participants.items():
                 domains = participant_info.get("domains", [])
                 if domains:
-                    # Use the first domain for the single agent
-                    domain_name = domains[0]
-                    domain_info = domain_manager.resolve_domain(domain_name, context="self")
-                    own_domain = {
-                        "domain_name": domain_info["name"],
-                        "domain_description": domain_info["description"],
-                        "has_description": domain_info["has_description"],
-                    }
+                    own_domain = self._resolve_domain_info(domain_manager, domains[0], context="self")
                     break
 
         context.update(

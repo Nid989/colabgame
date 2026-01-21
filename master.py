@@ -26,14 +26,14 @@ from src.utils.registry.parsers import parsers, get_parser_metadata, process_con
 from src.utils.image_manager import ImageManager
 from src.topologies.factory import TopologyFactory
 from src.topologies.base import TopologyType
-from scorer import ComputerGameScorer
+from scorer import ColabGameScorer
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
-class ComputerGame(NetworkDialogueGameMaster):
+class ColabGame(NetworkDialogueGameMaster):
     def __init__(
         self,
         game_spec: GameSpec,
@@ -1300,15 +1300,15 @@ class ComputerGame(NetworkDialogueGameMaster):
         return None
 
 
-class ComputerGameBenchmark(GameBenchmark):
+class ColabGameBenchmark(GameBenchmark):
     def __init__(self, game_spec: GameSpec):
         super().__init__(game_spec)
 
     def create_game_master(self, experiment: Dict, player_models: List[backends.Model]) -> GameMaster:
-        return ComputerGame(self.game_spec, experiment, player_models)
+        return ColabGame(self.game_spec, experiment, player_models)
 
     def create_game_scorer(self, experiment: Dict, game_instance: Dict) -> GameScorer:
-        return ComputerGameScorer(self.game_name, experiment, game_instance)
+        return ColabGameScorer(self.game_name, experiment, game_instance)
 
 
 if __name__ == "__main__":
@@ -1320,5 +1320,5 @@ if __name__ == "__main__":
     experiments = load_json("./in/instances.json")
     experiment_1 = experiments["experiments"][0]
     game_1 = experiment_1["game_instances"][0]
-    master = ComputerGame("computergame", None, experiment_1, ["mock", "mock"])
+    master = ColabGame("colabgame", None, experiment_1, ["mock", "mock"])
     master.setup(**game_1)

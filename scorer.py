@@ -10,7 +10,7 @@ from src.utils.s3_manager import S3Manager
 logger = logging.getLogger(__name__)
 
 
-class ComputerGameScorer(GameScorer):
+class ColabGameScorer(GameScorer):
     def __init__(self, name: str, experiment: Dict, game_instance: Dict):
         super().__init__(name, experiment, game_instance)
 

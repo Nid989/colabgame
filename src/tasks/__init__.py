@@ -1,5 +1,5 @@
 """
-Task generation package for computergame.
+Task generation package for colabgame.
 
 Provides task sampling, generation, and category management functionality.
 """

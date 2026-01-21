@@ -1,14 +1,12 @@
 [
-    {
-        "game_name": "computergame",
-        "game_path": "./",
-        "description": "A game where an agent interacts with a computer environment",
-        "main_game": "computergame",
-        "players": 1,
-        "image": "none",
-        "languages": [
-            "en"
-        ],
-        "benchmark": []
-    }
+  {
+    "game_name": "colabgame",
+    "game_path": "./",
+    "description": "A game where an agent interacts with a computer environment",
+    "main_game": "colabgame",
+    "players": 1,
+    "image": "none",
+    "languages": ["en"],
+    "benchmark": []
+  }
 ]
