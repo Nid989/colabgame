@@ -67,7 +67,6 @@ class ColabGameInstanceGenerator(GameInstanceGenerator):
                 raise ValueError(f"Missing required section: {section}")
 
         system_keys = [
-            "vm_path",
             "screen_width",
             "screen_height",
             "max_rounds",
@@ -78,6 +77,9 @@ class ColabGameInstanceGenerator(GameInstanceGenerator):
         for key in system_keys:
             if key not in self.config["system"]:
                 raise ValueError(f"System config missing required key: {key}")
+        # vm_path is optional if VM_PATH environment variable is set
+        if "vm_path" not in self.config["system"] and not os.getenv("VM_PATH"):
+            raise ValueError("System config missing required key: vm_path (or set VM_PATH environment variable)")
 
     def _load_osworld_tasks(self) -> None:
         """Load OSWorld tasks from osworld_subset.json."""
@@ -276,13 +278,18 @@ class ColabGameInstanceGenerator(GameInstanceGenerator):
     def _create_experiment_config(self, spec: ExperimentSpec) -> dict:
         """Create experiment configuration with system settings."""
         system = self.config["system"]
+        # Prefer VM_PATH environment variable, then config.yaml, then constants default
+        vm_path = os.getenv("VM_PATH") or system.get("vm_path")
+        if not vm_path:
+            from src.utils.constants import VM_PATH
+            vm_path = VM_PATH
         return {
             "headless": system.get("headless", False),
             "observation_type": spec.observation_type,
             "action_space": "pyautogui",
             "screen_width": system["screen_width"],
             "screen_height": system["screen_height"],
-            "path_to_vm": system["vm_path"],
+            "path_to_vm": vm_path,
             "sleep_after_execution": 0,
             "max_retries": 2,
             "max_rounds": system["max_rounds"],

@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from typing import Literal, get_args
 
@@ -28,6 +29,10 @@ class LogType(Enum):
     # SETUP_ERROR = "setup_error"  # Initialization errors
 
 
+# Get VM path from environment variable, with fallback to default
+# Users should set VM_PATH in their .env file after running setup_osworld.sh
+_DEFAULT_VM_PATH = "/Users/nidhirbhavsar/Desktop/WORK/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
+VM_PATH = os.getenv("VM_PATH", _DEFAULT_VM_PATH)
 # Default environment configuration
 DEFAULT_ENV_CONFIG = {
     "headless": False,
@@ -37,7 +42,7 @@ DEFAULT_ENV_CONFIG = {
     "screen_height": 1080,
     "max_steps": 5,
     "max_trajectory_length": 3,
-    "path_to_vm": "/Users/nidhirbhavsar/Desktop/WORK/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx",
+    "path_to_vm": VM_PATH,
     "sleep_after_execution": 0.0,
 }
 

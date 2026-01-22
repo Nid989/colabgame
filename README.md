@@ -49,12 +49,18 @@ Before installing ColabGame, ensure you have:
    ```bash
    bash setup_osworld.sh
    ```
-3. **Configure environment variables** (PYTHONPATH and S3 credentials)
-4. **Generate instances**:
+   The script will automatically configure the VM path in your `.env` file.
+3. **Source your environment variables**:
+   ```bash
+   export $(cat .env | xargs)
+   ```
+   This loads the VM path and other configuration from `.env`.
+4. **Configure S3 credentials** (if needed) in your `.env` file
+5. **Generate instances**:
    ```bash
    python3 src/instancegenerator.py
    ```
-5. **Run your first experiment**:
+6. **Run your first experiment**:
    ```bash
    python3 -m clem run -g colabgame -m mock
    ```
@@ -80,7 +86,7 @@ bash setup_osworld.sh [--osworld-dir PATH] [--skip-vm]
 - `--osworld-dir PATH`: Specify OSWorld clone location (default: `../OSWorld`)
 - `--skip-vm`: Skip VM initialization (for testing)
 
-The script checks prerequisites, clones OSWorld, installs dependencies, and downloads the Ubuntu VM (~20GB).
+The script checks prerequisites, clones OSWorld, installs dependencies, downloads the Ubuntu VM (~20GB), and automatically configures the VM path in your `.env` file.
 
 #### Option B: Manual Setup
 
@@ -127,6 +133,33 @@ The VM will be saved to: `./vmware_vm_data/Ubuntu0/Ubuntu0.vmx`
 
 #### Environment Configuration
 
+##### VM Path Configuration
+
+The VM path is automatically configured by the `setup_osworld.sh` script and added to your `.env` file as `VM_PATH`. The system will use this path in the following priority order:
+
+1. **Environment variable** (`VM_PATH` from `.env` file) - **Recommended**
+2. **Config file** (`resources/config.yaml` - `system.vm_path`)
+3. **Default fallback** (from `src/utils/constants.py`)
+
+**If you need to manually set the VM path:**
+
+1. **Option 1: Add to `.env` file** (Recommended)
+   ```bash
+   VM_PATH="/path/to/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
+   ```
+   Then source it:
+   ```bash
+   export $(cat .env | xargs)
+   ```
+
+2. **Option 2: Set in `resources/config.yaml`**
+   ```yaml
+   system:
+     vm_path: "/path/to/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
+   ```
+
+> **Note:** If you used the automated setup script, the VM path is already configured in your `.env` file. You only need to manually configure it if you installed the VM manually or moved it to a different location.
+
 ##### PYTHONPATH Setup
 
 Add the OSWorld repository path to your `PYTHONPATH`. You can do this in two ways:
@@ -143,6 +176,7 @@ Add the following to your `.env` file in the colabgame project root:
 
 ```bash
 PYTHONPATH=/path/to/OSWorld
+VM_PATH=/path/to/OSWorld/vmware_vm_data/Ubuntu0/Ubuntu0.vmx
 ```
 
 Then source the `.env` file:
@@ -150,6 +184,8 @@ Then source the `.env` file:
 ```bash
 export $(cat .env | xargs)
 ```
+
+> **Note:** If you used the automated setup script (`setup_osworld.sh`), `VM_PATH` is already added to your `.env` file. You only need to add `PYTHONPATH` if it's not already there.
 
 ##### S3 Configuration
 

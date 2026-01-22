@@ -136,11 +136,24 @@ if [ -d "$VENV_DIR" ]; then
     rm -rf "$VENV_DIR"
 fi
 
-$PYTHON_CMD -m venv "$VENV_DIR"
-echo "  ✓ Virtual environment created at: $VENV_DIR"
+# Try creating venv with pip, fall back to without-pip if ensurepip is unavailable
+if $PYTHON_CMD -m venv "$VENV_DIR" 2>/dev/null; then
+    echo "  ✓ Virtual environment created at: $VENV_DIR"
+else
+    echo "  Note: ensurepip unavailable, creating venv without pip..."
+    $PYTHON_CMD -m venv --without-pip "$VENV_DIR"
+    echo "  ✓ Virtual environment created at: $VENV_DIR"
+fi
 
-# Activate and install
+# Activate virtual environment
 source "$VENV_DIR/bin/activate"
+
+# Ensure pip is installed (handles --without-pip case)
+if ! command -v pip &> /dev/null; then
+    echo "  Installing pip via get-pip.py..."
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python
+fi
+
 pip install --quiet --upgrade pip setuptools wheel
 echo "  Installing forked OSWorld in editable mode..."
 pip install -e .
@@ -152,6 +165,7 @@ echo -e "${YELLOW}[4/5] Initializing VM...${NC}"
 
 if [ "$SKIP_VM" = true ]; then
     echo "  ⏩ Skipping VM initialization (--skip-vm flag)"
+    VM_PATH="$OSWORLD_DIR/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
 else
     VM_PATH="$OSWORLD_DIR/vmware_vm_data/Ubuntu0/Ubuntu0.vmx"
 
@@ -168,9 +182,37 @@ fi
 # Deactivate virtual environment
 deactivate
 
-# Step 5: Summary
+# Step 5: Configure VM path in .env file
 echo ""
-echo -e "${YELLOW}[5/5] Setup complete!${NC}"
+echo -e "${YELLOW}[5/5] Configuring ColabGame...${NC}"
+
+ENV_FILE="$COLABGAME_DIR/.env"
+# Create .env file if it doesn't exist
+if [ ! -f "$ENV_FILE" ]; then
+    touch "$ENV_FILE"
+    echo "  ✓ Created .env file"
+fi
+
+# Check if VM_PATH already exists in .env
+if grep -q "^VM_PATH=" "$ENV_FILE"; then
+    # Update existing VM_PATH
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        sed -i '' "s|^VM_PATH=.*|VM_PATH=\"$VM_PATH\"|" "$ENV_FILE"
+    else
+        # Linux
+        sed -i "s|^VM_PATH=.*|VM_PATH=\"$VM_PATH\"|" "$ENV_FILE"
+    fi
+    echo "  ✓ Updated VM_PATH in .env file"
+else
+    # Append VM_PATH to .env
+    echo "" >> "$ENV_FILE"
+    echo "# VM Path - automatically configured by setup_osworld.sh" >> "$ENV_FILE"
+    echo "VM_PATH=\"$VM_PATH\"" >> "$ENV_FILE"
+    echo "  ✓ Added VM_PATH to .env file"
+fi
+
+# Step 6: Summary
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  OSWorld Setup Complete!${NC}"
@@ -178,8 +220,14 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "VM Path: $VM_PATH"
 echo ""
-echo "Next steps for ColabGame:"
-echo "  1. Update path_to_vm in src/utils/constants.py:"
-echo -e "     ${GREEN}\"path_to_vm\": \"$VM_PATH\"${NC}"
-echo "  2. Run: uv run clem run -g colabgame -m model_name"
+echo "Configuration:"
+echo "  ✓ VM_PATH has been automatically added to .env file"
+echo ""
+echo "Next steps:"
+echo "  1. Source your .env file (if not already done):"
+echo -e "     ${GREEN}export \$(cat .env | xargs)${NC}"
+echo "  2. Generate instances:"
+echo -e "     ${GREEN}python3 src/instancegenerator.py${NC}"
+echo "  3. Run an experiment:"
+echo -e "     ${GREEN}python3 -m clem run -g colabgame -m mock${NC}"
 echo ""
