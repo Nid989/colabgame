@@ -695,7 +695,7 @@ packaging==24.2
     #   pooch
     #   scikit-image
     #   transformers
-pandas==2.0.1
+pandas>=2.0.1
     # via
     #   clemcore
     #   colabgame
