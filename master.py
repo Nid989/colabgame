@@ -98,6 +98,12 @@ class ColabGame(NetworkDialogueGameMaster):
         ]
         game_config.update({"use_images": use_images, "require_a11y_tree": require_a11y_tree})
 
+        # Override path_to_vm with VM_PATH environment variable if set
+        vm_path_env = os.getenv("VM_PATH")
+        if vm_path_env:
+            game_config["path_to_vm"] = vm_path_env
+            logger.info(f"Using VM_PATH from environment: {vm_path_env}")
+        
         # Always initialize ImageManager for archival purposes
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
